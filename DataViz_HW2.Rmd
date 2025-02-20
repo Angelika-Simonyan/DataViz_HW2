@@ -1,0 +1,150 @@
+```{r}
+library(ggplot2)
+library(readr)
+library(ggthemes)
+library(dplyr)
+library(ggrepel)
+library(viridis)
+```
+
+```{r}
+cancer_data <- read_csv("C:/Users/HP/OneDrive/Рабочий стол/DataViz/HW2/lung_cancer_prediction_dataset.csv")
+print(colnames(cancer_data))
+
+pollution_data <- read_csv("C:/Users/HP/OneDrive/Рабочий стол/DataViz/HW2/global_air_pollution_dataset.csv")
+```
+
+```{r}
+# Part 3.1
+
+ggplot(cancer_data, aes(y = .data[["Annual_Lung_Cancer_Deaths"]])) +
+  geom_boxplot(fill = "pink", color = "black") +
+  ggtitle("Distribution of Lung Cancer Deaths") +
+  ylab("Number of Deaths") +
+  theme_minimal()
+
+```
+
+```{r}
+# Part 3.2
+
+ggplot(pollution_data, aes(x = PM2.5_AQI_Value)) +
+  geom_histogram(fill = "pink", color = "black", bins = 30) +
+  ggtitle("Histogram of PM2.5 AQI Values") +
+  xlab("PM2.5 AQI Value") +
+  ylab("Frequency") +
+  theme_minimal()
+```
+
+```{r}
+# Part 3.3
+
+ggplot(cancer_data, aes(x = Mortality_Rate)) +
+  geom_density(fill = "pink", alpha = 0.5) +
+  ggtitle("Density Plot of Lung Cancer Mortality Rate") +
+  xlab("Mortality Rate") +
+  ylab("Density") +
+  theme_minimal()
+```
+
+```{r}
+# Part 3.4
+
+set.seed(123)
+normal_values <- rnorm(100)
+logistic_values <- rlogis(100)
+
+my_data <- data.frame(Normal = normal_values, Logistic = logistic_values)
+
+ggplot(my_data, aes(x = Normal, y = Logistic)) +
+  geom_point(color = "brown") +
+  ggtitle("Scatter Plot: Normal vs Logistic Distribution") +
+  xlab("Normal Distribution Values") +
+  ylab("Logistic Distribution Values") +
+  theme_solarized(light = FALSE)
+
+```
+
+```{r}
+# Part 4.2
+
+pollution_summary <- pollution_data %>%
+  group_by(Country) %>%
+  summarise(PM2.5_AQI_Value = mean(PM2.5_AQI_Value, na.rm = TRUE)) %>%
+  mutate(PM2.5_AQI_Value = as.numeric(PM2.5_AQI_Value))
+
+cancer_summary <- cancer_data %>%
+  group_by(Country) %>%
+  summarise(Annual_Lung_Cancer_Deaths = sum(Annual_Lung_Cancer_Deaths, na.rm = TRUE)) %>%
+  mutate(Annual_Lung_Cancer_Deaths = as.numeric(Annual_Lung_Cancer_Deaths))
+
+merged_data <- inner_join(pollution_summary, cancer_summary, by = "Country")
+
+ggplot(merged_data, aes(x = PM2.5_AQI_Value, y = Annual_Lung_Cancer_Deaths, label = Country, color = Country)) +
+  geom_point(aes(size = Annual_Lung_Cancer_Deaths), alpha = 0.6) +  
+  geom_text_repel(aes(label = ifelse(Annual_Lung_Cancer_Deaths > 5e8, Country, "")), size = 5, color = "black") +  
+  ggtitle("PM2.5 AQI vs. Annual Lung Cancer Deaths") +
+  scale_color_manual(values = rainbow(nrow(merged_data))) + 
+  xlab("PM2.5 AQI Value") +
+  ylab("Annual Lung Cancer Deaths")
+
+  theme_classic() + 
+  theme(panel.grid.major = element_line(color = "lightgray", linetype = "dotted"),
+      panel.grid.minor = element_line(color = "lightgray", linetype = "dotted"))
+```
+
+```{r}
+
+cancer_data_clean <- cancer_data %>%
+  filter(!is.na(Cancer_Stage) & Cancer_Stage != "None", 
+         !is.na(Years_of_Smoking) & Years_of_Smoking > 0) %>%  
+  mutate(Cancer_Stage = factor(Cancer_Stage, levels = c("Stage 1", "Stage 2", "Stage 3", "Stage 4")))
+
+
+ggplot(cancer_data_clean, aes(x = Years_of_Smoking, y = Cancer_Stage, color = Gender, shape = Gender)) +
+  geom_jitter(size = 1.0, alpha = 0.6) + 
+  scale_color_manual(values = c("Female" = "#d554f1", "Male" = "#5469f1")) +
+  scale_shape_manual(values = c("Female" = 17, "Male" = 20)) + #I struggled with this 20, tried dozens of numbers. cuz I thought it was a star, and not a filled circle. It still may be incorrect though
+  facet_wrap(~Gender) +  
+  labs(title = "Lung Cancer Stage vs. Smoking Years",
+       subtitle = "Comparison by Gender",
+       x = "Years of Smoking",
+       y = "Cancer Stage",
+       color = "Gender",  
+       shape = "Gender") +  
+  theme_minimal() + 
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 10),
+        strip.text = element_text(face = "bold"), 
+        legend.position = "bottom") + 
+  guides(color = guide_legend(title.position = "left", title.hjust = 1), 
+       shape = guide_legend(title.position = "left", title.hjust = 1))
+
+
+```
+
+```{r}
+selected_countries <- c("Brazil", "Germany", "India", "Italy", "Russian Federation", "United States of America")
+
+filtered_data <- pollution_data %>%
+  filter(Country %in% selected_countries)
+
+ggplot(filtered_data, aes(x = PM2.5_AQI_Value, fill = Country)) +
+  geom_histogram(binwidth = 10, color = "black", alpha = 0.7) +
+  scale_fill_viridis_d(option = "plasma") +
+  facet_wrap(~Country, scales = "free_y") +
+  labs(title = "PM2.5 AQI Distribution Across Selected Countries",
+       subtitle = "Comparison of Air Pollution Levels",
+       x = "PM2.5 AQI Value",
+       y = "Frequency",
+       fill = "Country") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 10),
+        strip.text = element_text(face = "bold", size = 7),
+        legend.position = "bottom")
+
+# Could not increase the distance between the values of Y axis...
+
+```
+
